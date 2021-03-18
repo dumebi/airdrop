@@ -1,5 +1,5 @@
-import { BigNumber, utils } from 'ethers'
-import BalanceTree from './balance-tree'
+const { BigNumber, utils } = require('ethers')
+const BalanceTree = require('./balance-tree')
 
 const { isAddress, getAddress } = utils
 
@@ -7,39 +7,37 @@ const { isAddress, getAddress } = utils
 // It is completely sufficient for recreating the entire merkle tree.
 // Anyone can verify that all air drops are included in the tree,
 // and the tree has no additional distributions.
-interface MerkleDistributorInfo {
-  merkleRoot: string
-  tokenTotal: string
-  claims: {
-    [account: string]: {
-      index: number
-      amount: string
-      proof: string[]
-      flags?: {
-        [flag: string]: boolean
-      }
-    }
-  }
-}
+// interface MerkleDistributorInfo {
+//   merkleRoot: string
+//   tokenTotal: string
+//   claims: {
+//     [account: string]: {
+//       index: number
+//       amount: string
+//       proof: string[]
+//       flags?: {
+//         [flag: string]: boolean
+//       }
+//     }
+//   }
+// }
 
-type OldFormat = { [account: string]: number | string }
-type NewFormat = { address: string; earnings: string; reasons: string }
+// type OldFormat = { [account: string]: number | string }
+// type NewFormat = { address: string; earnings: string; reasons: string }
 
-export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistributorInfo {
+function parseBalanceMap(balances) {
   // if balances are in an old format, process them
-  const balancesInNewFormat: NewFormat[] = Array.isArray(balances)
+  const balancesInNewFormat = Array.isArray(balances)
     ? balances
     : Object.keys(balances).map(
-        (account): NewFormat => ({
+        (account) => ({
           address: account,
           earnings: `0x${balances[account].toString(16)}`,
           reasons: '',
         })
       )
 
-  const dataByAddress = balancesInNewFormat.reduce<{
-    [address: string]: { amount: BigNumber; flags?: { [flag: string]: boolean } }
-  }>((memo, { address: account, earnings, reasons }) => {
+  const dataByAddress = balancesInNewFormat.reduce((memo, { address: account, earnings, reasons }) => {
     if (!isAddress(account)) {
       throw new Error(`Found invalid address: ${account}`)
     }
@@ -66,9 +64,7 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
   )
 
   // generate claims
-  const claims = sortedAddresses.reduce<{
-    [address: string]: { amount: string; index: number; proof: string[]; flags?: { [flag: string]: boolean } }
-  }>((memo, address, index) => {
+  const claims = sortedAddresses.reduce((memo, address, index) => {
     const { amount, flags } = dataByAddress[address]
     memo[address] = {
       index,
@@ -79,7 +75,7 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
     return memo
   }, {})
 
-  const tokenTotal: BigNumber = sortedAddresses.reduce<BigNumber>(
+  const tokenTotal = sortedAddresses.reduce(
     (memo, key) => memo.add(dataByAddress[key].amount),
     BigNumber.from(0)
   )
@@ -89,4 +85,8 @@ export function parseBalanceMap(balances: OldFormat | NewFormat[]): MerkleDistri
     tokenTotal: tokenTotal.toHexString(),
     claims,
   }
+}
+
+module.exports = {
+  parseBalanceMap
 }

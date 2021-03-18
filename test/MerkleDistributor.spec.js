@@ -1,11 +1,12 @@
-import chai, { expect } from 'chai'
-import { solidity, MockProvider, deployContract } from 'ethereum-waffle'
-import { Contract, BigNumber, constants } from 'ethers'
-import BalanceTree from '../src/balance-tree'
+const { expect } = require('chai')
+const chai = require('chai')
+const { solidity, MockProvider, deployContract } = require('ethereum-waffle')
+const { Contract, BigNumber, constants } = require('ethers')
+const BalanceTree = require('../src/balance-tree')
 
-import Distributor from '../build/MerkleDistributor.json'
-import TestERC20 from '../build/TestERC20.json'
-import { parseBalanceMap } from '../src/parse-balance-map'
+const Distributor = require('../build/MerkleDistributor.json')
+const TestERC20 = require('../build/TestERC20.json')
+const { parseBalanceMap } = require('../src/parse-balance-map')
 
 chai.use(solidity)
 
@@ -27,7 +28,7 @@ describe('MerkleDistributor', () => {
   const wallets = provider.getWallets()
   const [wallet0, wallet1] = wallets
 
-  let token: Contract
+  let token
   beforeEach('deploy token', async () => {
     token = await deployContract(wallet0, TestERC20, ['Token', 'TKN', 0], overrides)
   })
@@ -62,8 +63,8 @@ describe('MerkleDistributor', () => {
     })
 
     describe('two account tree', () => {
-      let distributor: Contract
-      let tree: BalanceTree
+      let distributor
+      let tree
       beforeEach('deploy', async () => {
         tree = new BalanceTree([
           { account: wallet0.address, amount: BigNumber.from(100) },
@@ -180,8 +181,8 @@ describe('MerkleDistributor', () => {
       })
     })
     describe('larger tree', () => {
-      let distributor: Contract
-      let tree: BalanceTree
+      let distributor
+      let tree
       beforeEach('deploy', async () => {
         tree = new BalanceTree(
           wallets.map((wallet, ix) => {
@@ -234,11 +235,11 @@ describe('MerkleDistributor', () => {
     })
 
     describe('realistic size tree', () => {
-      let distributor: Contract
-      let tree: BalanceTree
+      let distributor
+      let tree
       const NUM_LEAVES = 100_000
       const NUM_SAMPLES = 25
-      const elements: { account: string; amount: BigNumber }[] = []
+      const elements = []
       for (let i = 0; i < NUM_LEAVES; i++) {
         const node = { account: wallet0.address, amount: BigNumber.from(100) }
         elements.push(node)
@@ -274,8 +275,8 @@ describe('MerkleDistributor', () => {
         expect(receipt.gasUsed).to.eq(91586)
       })
       it('gas average random distribution', async () => {
-        let total: BigNumber = BigNumber.from(0)
-        let count: number = 0
+        let total = BigNumber.from(0)
+        let count = 0
         for (let i = 0; i < NUM_LEAVES; i += NUM_LEAVES / NUM_SAMPLES) {
           const proof = tree.getProof(i, wallet0.address, BigNumber.from(100))
           const tx = await distributor.claim(i, wallet0.address, 100, proof, overrides)
@@ -288,8 +289,8 @@ describe('MerkleDistributor', () => {
       })
       // this is what we gas golfed by packing the bitmap
       it('gas average first 25', async () => {
-        let total: BigNumber = BigNumber.from(0)
-        let count: number = 0
+        let total = BigNumber.from(0)
+        let count = 0
         for (let i = 0; i < 25; i++) {
           const proof = tree.getProof(i, wallet0.address, BigNumber.from(100))
           const tx = await distributor.claim(i, wallet0.address, 100, proof, overrides)
@@ -314,14 +315,8 @@ describe('MerkleDistributor', () => {
   })
 
   describe('parseBalanceMap', () => {
-    let distributor: Contract
-    let claims: {
-      [account: string]: {
-        index: number
-        amount: string
-        proof: string[]
-      }
-    }
+    let distributor
+    let claims
     beforeEach('deploy', async () => {
       const { claims: innerClaims, merkleRoot, tokenTotal } = parseBalanceMap({
         [wallet0.address]: 200,

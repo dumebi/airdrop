@@ -1,18 +1,18 @@
-import { program } from 'commander'
-import fs from 'fs'
-import { BigNumber, utils } from 'ethers'
+// import { program } from 'commander'
+const fs = require('fs')
+const { BigNumber, utils } = require('ethers')
 
-program
-  .version('0.0.0')
-  .requiredOption(
-    '-i, --input <path>',
-    'input JSON file location containing the merkle proofs for each account and the merkle root'
-  )
+// program
+//   .version('0.0.0')
+//   .requiredOption(
+//     '-i, --input <path>',
+//     'input JSON file location containing the merkle proofs for each account and the merkle root'
+//   )
 
-program.parse(process.argv)
-const json = JSON.parse(fs.readFileSync(program.input, { encoding: 'utf8' }))
+// program.parse(process.argv)
+const json = JSON.parse(fs.readFileSync("./scripts/claims.json", { encoding: 'utf8' }))
 
-const combinedHash = (first: Buffer, second: Buffer): Buffer => {
+const combinedHash = (first, second) => {
   if (!first) {
     return second
   }
@@ -26,18 +26,18 @@ const combinedHash = (first: Buffer, second: Buffer): Buffer => {
   )
 }
 
-const toNode = (index: number | BigNumber, account: string, amount: BigNumber): Buffer => {
+const toNode = (index, account, amount) => {
   const pairHex = utils.solidityKeccak256(['uint256', 'address', 'uint256'], [index, account, amount])
   return Buffer.from(pairHex.slice(2), 'hex')
 }
 
 const verifyProof = (
-  index: number | BigNumber,
-  account: string,
-  amount: BigNumber,
-  proof: Buffer[],
-  root: Buffer
-): boolean => {
+  index,
+  account,
+  amount,
+  proof,
+  root
+) => {
   let pair = toNode(index, account, amount)
   for (const item of proof) {
     pair = combinedHash(pair, item)
@@ -46,8 +46,8 @@ const verifyProof = (
   return pair.equals(root)
 }
 
-const getNextLayer = (elements: Buffer[]): Buffer[] => {
-  return elements.reduce<Buffer[]>((layer, el, idx, arr) => {
+const getNextLayer = (elements) => {
+  return elements.reduce((layer, el, idx, arr) => {
     if (idx % 2 === 0) {
       // Hash the current element with its pair element
       layer.push(combinedHash(el, arr[idx + 1]))
@@ -57,7 +57,7 @@ const getNextLayer = (elements: Buffer[]): Buffer[] => {
   }, [])
 }
 
-const getRoot = (balances: { account: string; amount: BigNumber; index: number }[]): Buffer => {
+const getRoot = (balances) => {
   let nodes = balances
     .map(({ account, amount, index }) => toNode(index, account, amount))
     // sort by lexicographical order
@@ -84,12 +84,12 @@ if (typeof json !== 'object') throw new Error('Invalid JSON')
 const merkleRootHex = json.merkleRoot
 const merkleRoot = Buffer.from(merkleRootHex.slice(2), 'hex')
 
-let balances: { index: number; account: string; amount: BigNumber }[] = []
+let balances = []
 let valid = true
 
 Object.keys(json.claims).forEach((address) => {
   const claim = json.claims[address]
-  const proof = claim.proof.map((p: string) => Buffer.from(p.slice(2), 'hex'))
+  const proof = claim.proof.map((p) => Buffer.from(p.slice(2), 'hex'))
   balances.push({ index: claim.index, account: address, amount: BigNumber.from(claim.amount) })
   if (verifyProof(claim.index, address, claim.amount, proof, merkleRoot)) {
     console.log('Verified proof for', claim.index, address)
@@ -109,3 +109,9 @@ console.log('Done!')
 const root = getRoot(balances).toString('hex')
 console.log('Reconstructed merkle root', root)
 console.log('Root matches the one read from the JSON?', root === merkleRootHex.slice(2))
+
+
+module.exports = {
+  getRoot,
+  verifyProof
+}
