@@ -1,3 +1,8 @@
+# Airdrop
+Makes use of a merkle-proof to create an airdrop infrastructure for an ERC20 token
+
+see `js-version` branch for the javascript version
+
 # @uniswap/merkle-distributor
 
 [![Tests](https://github.com/Uniswap/merkle-distributor/workflows/Tests/badge.svg)](https://github.com/Uniswap/merkle-distributor/actions?query=workflow%3ATests)
